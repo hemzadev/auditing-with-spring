@@ -12,7 +12,62 @@ This repository is a multi-module Maven project:
 - `bestlogspractices-spring-boot-starter` → Spring Boot auto-configuration that wires the core in any app
 
 
-## 1) Build and install the starter locally
+## 1) Publish to GitHub Packages (so you can use it without cloning)
+
+### 1.1 Push this repository to GitHub
+
+Repo: `https://github.com/hemzadev/log-repo`
+
+```bash
+cd C:\projects\personal\practicing\bestlogspractices
+git init
+git add .
+git commit -m "Bestlogspractices starter"
+git branch -M main
+git remote add origin https://github.com/hemzadev/log-repo.git
+git push -u origin main
+```
+
+### 1.2 (Recommended) Publish via GitHub Actions
+
+This repo includes a workflow at:
+
+- `.github/workflows/maven-publish.yml`
+
+It publishes to GitHub Packages when you push a tag like `v0.1.0`.
+
+Example:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+### 1.3 Publish from your machine (alternative)
+
+Create `~/.m2/settings.xml` with a token that has `write:packages` (and `read:packages`).
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>YOUR_GITHUB_USERNAME</username>
+      <password>YOUR_GITHUB_TOKEN</password>
+    </server>
+  </servers>
+</settings>
+```
+
+Then run:
+
+```bash
+mvnw.cmd -DskipTests clean deploy
+```
+
+---
+
+## 2) Build and install the starter locally
 
 From the repo root:
 
