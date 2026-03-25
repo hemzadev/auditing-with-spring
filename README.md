@@ -1,87 +1,40 @@
 # bestlogspractices (Spring Boot Starter)
 
-Reusable Spring Boot starter that provides:
+A lightweight Spring Boot Starter that ships **audit trail + soft delete infrastructure** you can reuse across services.
 
-- **Audit trail** via application events (persisted after transaction commit).
-- **Soft-delete infrastructure** based on a Hibernate filter that can be enabled/disabled per service/method.
-- **JPA auditing fields** (`@CreatedDate`, `@LastModifiedDate`, `@CreatedBy`, `@LastModifiedBy`) via Spring Data.
+It focuses on:
+- **Audit trail** via application events (persisted **after transaction commit**).
+- **Soft-delete** via a Hibernate filter (toggleable at service/method level).
+- **JPA auditing fields** (`@CreatedDate`, `@LastModifiedDate`, `@CreatedBy`, `@LastModifiedBy`).
 
-This repository is a multi-module Maven project:
-
-- `bestlogspractices-core` → the reusable implementation (entities, repositories, aspects, helpers)
-- `bestlogspractices-spring-boot-starter` → Spring Boot auto-configuration that wires the core in any app
-
-
-## 1) Publish to GitHub Packages (so you can use it without cloning)
-
-### 1.1 Push this repository to GitHub
-
-Repo: `https://github.com/hemzadev/log-repo`
-
-```bash
-cd C:\projects\personal\practicing\bestlogspractices
-git init
-git add .
-git commit -m "Bestlogspractices starter"
-git branch -M main
-git remote add origin https://github.com/hemzadev/log-repo.git
-git push -u origin main
-```
-
-### 1.2 (Recommended) Publish via GitHub Actions
-
-This repo includes a workflow at:
-
-- `.github/workflows/maven-publish.yml`
-
-It publishes to GitHub Packages when you push a tag like `v0.1.0`.
-
-Example:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-### 1.3 Publish from your machine (alternative)
-
-Create `~/.m2/settings.xml` with a token that has `write:packages` (and `read:packages`).
-
-```xml
-<settings>
-  <servers>
-    <server>
-      <id>github</id>
-      <username>YOUR_GITHUB_USERNAME</username>
-      <password>YOUR_GITHUB_TOKEN</password>
-    </server>
-  </servers>
-</settings>
-```
-
-Then run:
-
-```bash
-mvnw.cmd -DskipTests clean deploy
-```
+This repository is a **multi-module Maven** project:
+- `bestlogspractices-core` → implementation (entities, repositories, aspects, helpers)
+- `bestlogspractices-spring-boot-starter` → Spring Boot auto-configuration
 
 ---
 
-## 2) Build and install the starter locally
+## Why this exists
 
-From the repo root:
+In many CRUD apps you end up rewriting the same "boring" infrastructure:
+- when/who updated an entity
+- soft delete and “show deleted” admin views
+- persist audit logs safely, without breaking business transactions
+
+This starter provides those building blocks so your app code stays clean.
+
+---
+
+## Quick start
+
+### 1) Add the dependency
+
+#### Option A — build/install locally (no keys required)
 
 ```bash
-cd C:\projects\personal\practicing\bestlogspractices
-mvnw.cmd -DskipTests clean install
+mvn -DskipTests clean install
 ```
 
-This installs the artifacts to your local Maven cache (`~/.m2`).
-
-
-## 2) Add the dependency to your project
-
-In the consumer project `pom.xml`:
+Then in the consumer project:
 
 ```xml
 <dependency>
@@ -91,31 +44,35 @@ In the consumer project `pom.xml`:
 </dependency>
 ```
 
-That’s it for wiring: the starter auto-configures itself through Spring Boot’s auto-configuration mechanism.
+#### Option B — Maven Central (planned)
 
+Once released to Maven Central, you’ll be able to use it with the same dependency coordinates (no auth/token required).
 
-## 3) Ensure your project has the required base dependencies
+---
 
-Your app needs the usual Spring Boot dependencies for JPA + AOP:
+## Requirements / constraints
 
-- `spring-boot-starter-data-jpa`
-- `spring-boot-starter-aop` (required for the soft-delete aspect)
+- **Java 21+**
+- **Spring Boot 3.x**
+- Your app must include:
+  - `spring-boot-starter-data-jpa`
+  - `spring-boot-starter-aop` (required for the soft-delete aspect)
 
-If you want actor/IP resolution from SecurityContext + HTTP request:
-
-- `spring-boot-starter-security` (optional)
-- `spring-boot-starter-web` (optional)
+Optional integrations:
+- `spring-boot-starter-security` (for actor resolution via `SecurityContext`)
+- `spring-boot-starter-web` (for IP extraction from HTTP request)
 
 Notes:
-- `spring-web` and `jakarta.servlet-api` are marked **optional** inside the library, so your app can still be non-web.
-- If your app is non-web, IP falls back to `"internal"`.
+- If Security is not present or the user is unauthenticated, actor falls back to `system`.
+- If the app is non-web, IP falls back to `internal`.
 
+---
 
-## 4) Database: create the audit table
+## Database
 
-The starter ships an entity `AuditLog` mapped to the table `audit_logs`.
+The starter ships an entity `AuditLog` mapped to table `audit_logs`.
 
-If your app uses `spring.jpa.hibernate.ddl-auto=update`, Hibernate can create it automatically.
+If you run with `spring.jpa.hibernate.ddl-auto=update` in dev, Hibernate can create it.
 
 For production, prefer migrations (Flyway/Liquibase). Minimal PostgreSQL example:
 
@@ -137,10 +94,11 @@ create index if not exists idx_audit_timestamp on audit_logs(occurred_at);
 create index if not exists idx_audit_action on audit_logs(action);
 ```
 
+---
 
-## 5) Soft delete: extend BaseEntity
+## Soft delete
 
-To enable soft-delete + auditing fields on your own entities, extend:
+To enable soft-delete + auditing fields on your entities, extend:
 
 - `ma.hemzastudio.bestlogspractices.common.persistence.entity.BaseEntity`
 
@@ -158,20 +116,16 @@ public class Product extends BaseEntity {
   private java.util.UUID id;
 
   private String name;
-
-  // getters/setters for domain fields only
 }
 ```
 
-### How filtering works
+### Filtering (active vs deleted)
 
 `BaseEntity` defines a Hibernate filter named **`activeOnlyFilter`**.
-The library provides an AOP aspect that toggles it using annotations:
 
-- `@ActiveOnly` → enable filter (typically show non-deleted)
-- `@IncludeDeleted` → disable filter (admin/audit use-cases)
-
-Annotate a service class or a specific service method.
+The starter toggles this filter using annotations:
+- `@ActiveOnly` → enables filter (show non-deleted)
+- `@IncludeDeleted` → disables filter (admin/audit use cases)
 
 Example:
 
@@ -182,11 +136,11 @@ import org.springframework.stereotype.Service;
 @Service
 @ActiveOnly
 public class ProductService {
-  // repository queries inside here will only see active rows
+  // repository queries inside will only see active rows
 }
 ```
 
-For admin/audit services:
+Admin use:
 
 ```java
 import ma.hemzastudio.bestlogspractices.common.annotation.IncludeDeleted;
@@ -195,17 +149,18 @@ import org.springframework.stereotype.Service;
 @Service
 @IncludeDeleted
 public class ProductAdminService {
-  // repository queries can see deleted + active rows
+  // repository queries can see deleted + active
 }
 ```
 
+---
 
-## 6) Audit trail: publish audit events
+## Audit trail
 
-Inject `AuditPublisher` and publish an audit event whenever you mutate an entity.
+Inject `AuditPublisher` and publish an audit event when you mutate an entity.
 
 - Publisher: `ma.hemzastudio.bestlogspractices.common.audit.publisher.AuditPublisher`
-- Listener: `AuditEventListener` persists the row **AFTER_COMMIT** in a **REQUIRES_NEW** transaction.
+- Listener persists the audit row **AFTER_COMMIT** in a **REQUIRES_NEW** transaction.
 
 Example:
 
@@ -238,54 +193,33 @@ public class ProductWriteService {
 }
 ```
 
+---
 
-## 7) JPA auditing (created/updated by)
+## JPA auditing (`createdBy`, `updatedBy`, ...)
 
-The starter enables JPA auditing automatically:
+The starter enables JPA auditing and provides an `AuditorAware` implementation.
 
-- `@EnableJpaAuditing(auditorAwareRef = "auditorProvider")`
+- Uses Spring Security `Authentication#getName()` when available
+- Falls back to `system`
 
-It also provides `AuditorAwareImpl` (bean name `auditorProvider`) which:
-
-- uses Spring Security `Authentication#getName()` when available
-- falls back to `"system"` when unauthenticated
-
-
-## 8) What the starter auto-configures for you
-
-Auto-config class:
-
-- `ma.hemzastudio.bestlogspractices.starter.BestLogsPracticesAutoConfiguration`
-
-It:
-
-- enables async execution (`@EnableAsync`) because audit listener is `@Async`
-- enables JPA auditing (`@EnableJpaAuditing`)
-- scans library components (`@ComponentScan`)
-- registers library JPA repositories (`@EnableJpaRepositories`)
-- registers library entities (`@EntityScan`)
-
-So consumer projects do **not** need to share the same base package.
-
+---
 
 ## Troubleshooting
 
 ### Audit logs not being saved
 
-Checklist:
-
-1. Your mutation method must run inside a transaction (`@Transactional`).
-2. The audit event is persisted **AFTER_COMMIT**, so if the business transaction rolls back, no audit row is written.
-3. Ensure async execution is available (starter enables it). If you override async config, ensure task executor is present.
+1. Your mutation must run inside a transaction (`@Transactional`).
+2. Audit persistence is **AFTER_COMMIT** — if the business transaction rolls back, no audit row is written.
+3. If you override async config, ensure a task executor exists.
 
 ### Soft-delete filter seems ignored
 
-1. Ensure your app includes `spring-boot-starter-aop`.
-2. Ensure your entities extend `BaseEntity` (filter is defined there).
-3. Apply `@ActiveOnly` / `@IncludeDeleted` on a Spring-managed `@Service` (AOP needs a proxied bean).
+1. Ensure you have `spring-boot-starter-aop`.
+2. Ensure entities extend `BaseEntity`.
+3. Apply `@ActiveOnly` / `@IncludeDeleted` on Spring-managed beans (`@Service`).
 
+---
 
-## Versioning / publishing
+## License
 
-Right now this is `0.1.0-SNAPSHOT` and is installed locally via `mvn install`.
-To share across machines/CI, publish to Nexus/Artifactory/GitHub Packages (or release to Maven Central).
+Apache-2.0 — see [LICENSE](./LICENSE).

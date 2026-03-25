@@ -6,9 +6,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>ma.hemzastudio</groupId>
+    <groupId>io.github.hemzadev</groupId>
     <artifactId>bestlogspractices-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
   </parent>
 
   <artifactId>bestlogspractices-spring-boot-starter</artifactId>
@@ -17,7 +17,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>ma.hemzastudio</groupId>
+      <groupId>io.github.hemzadev</groupId>
       <artifactId>bestlogspractices-core</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -44,12 +44,6 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
-      <optional>true</optional>
-    </dependency>
-
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
       <optional>true</optional>
     </dependency>
 

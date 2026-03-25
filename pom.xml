@@ -12,12 +12,35 @@
     <relativePath/>
   </parent>
 
-  <groupId>ma.hemzastudio</groupId>
+  <groupId>io.github.hemzadev</groupId>
   <artifactId>bestlogspractices-parent</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <packaging>pom</packaging>
   <name>bestlogspractices (parent)</name>
   <description>Audit/logging best practices as a reusable Spring Boot Starter</description>
+  <url>https://github.com/hemzadev/log-repo</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>hemzadev</id>
+      <name>Hamza Ben Azza</name>
+      <url>https://github.com/hemzadev</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/hemzadev/log-repo.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com:hemzadev/log-repo.git</developerConnection>
+    <url>https://github.com/hemzadev/log-repo</url>
+  </scm>
 
   <modules>
     <module>bestlogspractices-core</module>
@@ -28,6 +51,8 @@
     <java.version>21</java.version>
     <spring-boot.version>3.4.3</spring-boot.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <!-- Explicit BOM import so all children always inherit dependency versions -->
@@ -43,18 +68,80 @@
     </dependencies>
   </dependencyManagement>
 
-  <!-- Publish artifacts to GitHub Packages (Maven) -->
-  <distributionManagement>
-    <repository>
-      <id>github</id>
-      <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/hemzadev/log-repo</url>
-    </repository>
-    <snapshotRepository>
-      <id>github</id>
-      <name>GitHub Packages</name>
-      <url>https://maven.pkg.github.com/hemzadev/log-repo</url>
-    </snapshotRepository>
-  </distributionManagement>
+  <build>
+    <plugins>
+      <!-- Maven Central requires -sources.jar and -javadoc.jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>3.7.0</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <!-- Make release more robust on CI (JDK doclint can be strict) -->
+          <doclint>none</doclint>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <!-- Sign all artifacts (required by Maven Central) -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Publish to Sonatype Central (Central Portal) -->
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.6.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <!-- server credentials come from ~/.m2/settings.xml -->
+              <publishingServerId>central</publishingServerId>
+              <!-- AUTOMATIC = release immediately after validation -->
+              <publishingType>AUTOMATIC</publishingType>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>
